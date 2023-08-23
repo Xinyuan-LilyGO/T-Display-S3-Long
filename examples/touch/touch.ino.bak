@@ -1,0 +1,53 @@
+#include <Arduino.h>
+#include "axs_platform.h"
+#include "touch_panel.h"
+#include <Wire.h>
+#include "axs_core.h"
+
+uint8_t ALS_ADDRESS = 0x3B;
+#define TOUCH_IICSCL 10
+#define TOUCH_IICSDA 15
+#define TOUCH_INT 11
+#define TOUCH_RES 16
+
+void setup() {
+    Serial.begin(115200);
+    Serial.println("sta\n");
+
+    pinMode(TOUCH_RES, OUTPUT);
+    digitalWrite(TOUCH_RES, HIGH);delay(2);
+    digitalWrite(TOUCH_RES, LOW);delay(10);
+    digitalWrite(TOUCH_RES, HIGH);delay(2);
+
+    Wire.begin(TOUCH_IICSDA, TOUCH_IICSCL);
+
+    Serial.println("end\n");
+}
+
+uint8_t read_touchpad_cmd[11] = {0xb5, 0xab, 0xa5, 0x5a, 0x0, 0x0, 0x0, 0x8};
+void loop() {
+    uint8_t buff[20] = {0};
+    Wire.beginTransmission(ALS_ADDRESS);
+    Wire.write(read_touchpad_cmd, 8);
+    Wire.endTransmission();
+    Wire.requestFrom(ALS_ADDRESS, 8);
+    while (!Wire.available());
+    Wire.readBytes(buff, 8);
+
+    UINT16 pointX;
+    UINT16 pointY;
+    UINT16 type = 0;
+
+    type = AXS_GET_GESTURE_TYPE(buff);
+    pointX = AXS_GET_POINT_X(buff,0);
+    pointY = AXS_GET_POINT_Y(buff,0);
+
+    if (!type && (pointX || pointY)) {
+          pointX = (640-pointX);
+          if(pointX > 640) pointX = 640;
+          if(pointY > 180) pointY = 180;
+
+          printf("x = %d, y = %d\n", pointX, pointY);
+    }
+    delay(50);
+}
