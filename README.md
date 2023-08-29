@@ -6,6 +6,9 @@
 | -------------------------- | ---------- | ----- | -------- | ---------- |
 | [T-Display-S3-Long-3.4][1] | ESP32-S3R8 | 16MB  | 8MB(OPI) | 180x640    |
 
+[1]:https://www.lilygo.cc
+
+
 ## 2️⃣Examples
 
 ```txt
@@ -68,6 +71,9 @@ Please enter the upload mode manually.
 2. If the above is invalid, burn the [binary file](./firmware/README.MD)  to check whether the hardware is normal
 
 # 7️⃣ Depends on required libraries
+
+
+**Do not upgrade the LVGL version, the lvgl software rotation has been forced to open.**
 
 * [lvgl 8.3.0](https://github.com/lvgl/lvgl)
 * [XPowersLib](https://github.com/lewisxhe/XPowersLib)
