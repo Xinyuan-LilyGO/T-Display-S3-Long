@@ -1,10 +1,10 @@
-<h1 align = "center">🌟T-Display-S3-Long-3.4🌟</h1> 
+<h1 align = "center">🌟T-Display-S3-Long🌟</h1> 
 
 ## 1️⃣Product
 
 | Product(PinMap)            | SOC        | Flash | PSRAM    | Resolution |
 | -------------------------- | ---------- | ----- | -------- | ---------- |
-| [T-Display-S3-Long-3.4][1] | ESP32-S3R8 | 16MB  | 8MB(OPI) | 180x640    |
+| [T-Display-S3-Long][1] | ESP32-S3R8 | 16MB  | 8MB(OPI) | 180x640    |
 
 [1]:https://www.lilygo.cc
 
@@ -24,7 +24,7 @@ examples/
 1. Install [Visual Studio Code](https://code.visualstudio.com/) and [Python](https://www.python.org/)
 2. Search for the `PlatformIO` plugin in the `VisualStudioCode` extension and install it.
 3. After the installation is complete, you need to restart `VisualStudioCode`
-4. After restarting `VisualStudioCode`, select `File` in the upper left corner of `VisualStudioCode` -> `Open Folder` -> select the `T-Display-S3-Long-3.4` directory
+4. After restarting `VisualStudioCode`, select `File` in the upper left corner of `VisualStudioCode` -> `Open Folder` -> select the `T-Display-S3-Long` directory
 5. Wait for the installation of third-party dependent libraries to complete
 6. Click on the `platformio.ini` file, and in the `platformio` column
 7. Uncomment one of the lines `src_dir = xxxx` to make sure only one line works
@@ -40,11 +40,11 @@ examples/
 
 1. Install [Arduino IDE](https://www.arduino.cc/en/software)
 2. Install [Arduino ESP32](https://docs.espressif.com/projects/arduino-esp32/en/latest/) 
-3. Download `T-Display-S3-Long-3.4` , move to Arduino library folder (e.g. C:\Users\YourName\Documents\Arduino\libraries)
-4. Copy all folders in [libdeps folder](./libdeps/)  to Arduino library folder (e.g. C:\Users\YourName\Documents\Arduino\libraries)
+3. Download `T-Display-S3-Long` , move to Arduino library folder (e.g. C:\Users\YourName\Documents\Arduino\libraries)
+4. Copy all folders in [lib folder](./libdeps/)  to Arduino library folder (e.g. C:\Users\YourName\Documents\Arduino\libraries)
 5. Open ArduinoIDE  ,`Tools` , Look at the picture to choose
   ![setting](images/ArduinoIDE.jpg)
-6. `File` -> `Examples` -> `T-Display-S3-Long-3.4` -> `Any Examples`
+6. `File` -> `Examples` -> `T-Display-S3-Long` -> `Any Examples`
 7. Select `Port`
 8. Click `upload` , Wait for compilation and writing to complete
 9. If it cannot be written, or the USB device keeps flashing, please check the **FAQ** below
