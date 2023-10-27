@@ -7,8 +7,8 @@
 #define TFT_SPI_MODE          SPI_MODE0
 #define TFT_SPI_HOST          SPI2_HOST
 
-#define WIFI_SSID             "YOUR_WIFI_SSID"
-#define WIFI_PASSWORD         "YOUR_WIFI_PASSWORD"
+#define WIFI_SSID             "xinyuandianzi"
+#define WIFI_PASSWORD         "AA15994823428"
 
 #define WIFI_CONNECT_WAIT_MAX (30 * 1000)
 
