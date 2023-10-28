@@ -148,7 +148,8 @@ void setup() {
         Serial.println("PMU is not online...");
         delay(50);
     }
-    else  {
+    else 
+    {
         PMU.enableADCMeasure();
     }
 
