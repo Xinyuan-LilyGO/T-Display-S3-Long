@@ -1,4 +1,4 @@
-#include "lvgl.h"      /* https://github.com/lvgl/lvgl.git */
+#include "lvgl.h" /* https://github.com/lvgl/lvgl.git */
 #include "AXS15231B.h"
 #include "WiFi.h"
 #include "factory_gui.h"
@@ -14,45 +14,45 @@
 #include <Wire.h>
 #include "freertos/semphr.h"
 SemaphoreHandle_t xSemaphore = NULL;
-PowersSY6970 PMU;
+PowersSY6970      PMU;
 
 //================================
-//If you turn on software rotation(disp_drv.sw_rotate = 1), Do not update or replace LVGL.
-//disp_drv.full_refresh must be 1
+// If you turn on software rotation(disp_drv.sw_rotate = 1), Do not update or replace LVGL.
+// disp_drv.full_refresh must be 1
 //================================
 
 const char *ntpServer1 = "pool.ntp.org";
 const char *ntpServer2 = "time.nist.gov";
 
 static lv_disp_draw_buf_t draw_buf;
-static lv_color_t *buf;
-static lv_color_t *buf1;
+static lv_color_t        *buf;
+static lv_color_t        *buf1;
 
 uint8_t ALS_ADDRESS = 0x3B;
 #define TOUCH_IICSCL 10
 #define TOUCH_IICSDA 15
-#define TOUCH_INT 11
-#define TOUCH_RES 16
+#define TOUCH_INT    11
+#define TOUCH_RES    16
 
-#define AXS_TOUCH_ONE_POINT_LEN             6
-#define AXS_TOUCH_BUF_HEAD_LEN              2
+#define AXS_TOUCH_ONE_POINT_LEN 6
+#define AXS_TOUCH_BUF_HEAD_LEN  2
 
-#define AXS_TOUCH_GESTURE_POS               0
-#define AXS_TOUCH_POINT_NUM                 1
-#define AXS_TOUCH_EVENT_POS                 2
-#define AXS_TOUCH_X_H_POS                   2
-#define AXS_TOUCH_X_L_POS                   3
-#define AXS_TOUCH_ID_POS                    4
-#define AXS_TOUCH_Y_H_POS                   4
-#define AXS_TOUCH_Y_L_POS                   5
-#define AXS_TOUCH_WEIGHT_POS                6
-#define AXS_TOUCH_AREA_POS                  7
+#define AXS_TOUCH_GESTURE_POS 0
+#define AXS_TOUCH_POINT_NUM   1
+#define AXS_TOUCH_EVENT_POS   2
+#define AXS_TOUCH_X_H_POS     2
+#define AXS_TOUCH_X_L_POS     3
+#define AXS_TOUCH_ID_POS      4
+#define AXS_TOUCH_Y_H_POS     4
+#define AXS_TOUCH_Y_L_POS     5
+#define AXS_TOUCH_WEIGHT_POS  6
+#define AXS_TOUCH_AREA_POS    7
 
-#define AXS_GET_POINT_NUM(buf) buf[AXS_TOUCH_POINT_NUM]
-#define AXS_GET_GESTURE_TYPE(buf)  buf[AXS_TOUCH_GESTURE_POS]
-#define AXS_GET_POINT_X(buf,point_index) (((uint16_t)(buf[AXS_TOUCH_ONE_POINT_LEN*point_index+AXS_TOUCH_X_H_POS] & 0x0F) <<8) + (uint16_t)buf[AXS_TOUCH_ONE_POINT_LEN*point_index+AXS_TOUCH_X_L_POS])
-#define AXS_GET_POINT_Y(buf,point_index) (((uint16_t)(buf[AXS_TOUCH_ONE_POINT_LEN*point_index+AXS_TOUCH_Y_H_POS] & 0x0F) <<8) + (uint16_t)buf[AXS_TOUCH_ONE_POINT_LEN*point_index+AXS_TOUCH_Y_L_POS])
-#define AXS_GET_POINT_EVENT(buf,point_index) (buf[AXS_TOUCH_ONE_POINT_LEN*point_index+AXS_TOUCH_EVENT_POS] >> 6)
+#define AXS_GET_POINT_NUM(buf)                buf[AXS_TOUCH_POINT_NUM]
+#define AXS_GET_GESTURE_TYPE(buf)             buf[AXS_TOUCH_GESTURE_POS]
+#define AXS_GET_POINT_X(buf, point_index)     (((uint16_t)(buf[AXS_TOUCH_ONE_POINT_LEN * point_index + AXS_TOUCH_X_H_POS] & 0x0F) << 8) + (uint16_t)buf[AXS_TOUCH_ONE_POINT_LEN * point_index + AXS_TOUCH_X_L_POS])
+#define AXS_GET_POINT_Y(buf, point_index)     (((uint16_t)(buf[AXS_TOUCH_ONE_POINT_LEN * point_index + AXS_TOUCH_Y_H_POS] & 0x0F) << 8) + (uint16_t)buf[AXS_TOUCH_ONE_POINT_LEN * point_index + AXS_TOUCH_Y_L_POS])
+#define AXS_GET_POINT_EVENT(buf, point_index) (buf[AXS_TOUCH_ONE_POINT_LEN * point_index + AXS_TOUCH_EVENT_POS] >> 6)
 
 #define SY6970_OTG_EN 45
 
@@ -61,71 +61,75 @@ void SmartConfig();
 void setTimezone();
 
 static uint32_t last_tick;
-struct tm timeinfo;
-uint32_t cycleInterval = 0;
+struct tm       timeinfo;
+uint32_t        cycleInterval = 0;
 
 void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area,
-                   lv_color_t *color_p) {
+                   lv_color_t *color_p)
+{
     uint32_t w = (area->x2 - area->x1 + 1);
     uint32_t h = (area->y2 - area->y1 + 1);
 
-    #ifdef LCD_SPI_DMA
-        char i = 0;
-		while (get_lcd_spi_dma_write())
-		{
-			i = i >> 1;
-			lcd_PushColors(0, 0, 0, 0, NULL);
-		}
-    #endif
-      lcd_PushColors(area->x1, area->y1, w, h, (uint16_t *)&color_p->full);
+#ifdef LCD_SPI_DMA
+    char i = 0;
+    while (get_lcd_spi_dma_write()) {
+        i = i >> 1;
+        lcd_PushColors(0, 0, 0, 0, NULL);
+    }
+#endif
+    lcd_PushColors(area->x1, area->y1, w, h, (uint16_t *)&color_p->full);
 
-    #ifdef LCD_SPI_DMA
+#ifdef LCD_SPI_DMA
 
-    #else
-        lv_disp_flush_ready(disp);
-    #endif
+#else
+    lv_disp_flush_ready(disp);
+#endif
 }
 
 uint8_t read_touchpad_cmd[11] = {0xb5, 0xab, 0xa5, 0x5a, 0x0, 0x0, 0x0, 0x8};
-void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data) {
-   xSemaphoreTake(xSemaphore,portMAX_DELAY);
+void    my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data)
+{
+    xSemaphoreTake(xSemaphore, portMAX_DELAY);
     uint8_t buff[20] = {0};
 
     Wire.beginTransmission(0x3B);
     Wire.write(read_touchpad_cmd, 8);
     Wire.endTransmission();
     Wire.requestFrom(0x3B, 8);
-    while (!Wire.available());
+    while (!Wire.available())
+        ;
     Wire.readBytes(buff, 8);
 
     uint16_t pointX;
     uint16_t pointY;
     uint16_t type = 0;
 
-    type = AXS_GET_GESTURE_TYPE(buff);
-    pointX = AXS_GET_POINT_X(buff,0);
-    pointY = AXS_GET_POINT_Y(buff,0);
+    type   = AXS_GET_GESTURE_TYPE(buff);
+    pointX = AXS_GET_POINT_X(buff, 0);
+    pointY = AXS_GET_POINT_Y(buff, 0);
 
     if (!type && (pointX || pointY)) {
-          pointX = (640-pointX);
-          if(pointX > 640) pointX = 640;
-          if(pointY > 180) pointY = 180;
-          data->state = LV_INDEV_STATE_PR;
-          data->point.x = pointY;
-          data->point.y = pointX;
+        pointX = (640 - pointX);
+        if (pointX > 640)
+            pointX = 640;
+        if (pointY > 180)
+            pointY = 180;
+        data->state   = LV_INDEV_STATE_PR;
+        data->point.x = pointY;
+        data->point.y = pointX;
 
-          String str_buf;
-          str_buf += "x: " + String(pointY) + " y: " + String(pointX) + "\n";
-          lv_msg_send(MSG_NEW_TOUCH_POINT, str_buf.c_str());
-    }
-    else {
+        String str_buf;
+        str_buf += "x: " + String(pointY) + " y: " + String(pointX) + "\n";
+        lv_msg_send(MSG_NEW_TOUCH_POINT, str_buf.c_str());
+    } else {
         data->state = LV_INDEV_STATE_REL;
     }
     xSemaphoreGive(xSemaphore);
 }
 
 bool result = false;
-void setup() {
+void setup()
+{
     xSemaphore = xSemaphoreCreateBinary();
     xSemaphoreGive(xSemaphore);
 
@@ -143,43 +147,39 @@ void setup() {
     delay(2);
 
     Wire.begin(TOUCH_IICSDA, TOUCH_IICSCL);
-    //result =  PMU.init(Wire, TOUCH_IICSDA, TOUCH_IICSCL, SY6970_SLAVE_ADDRESS);
+    // result =  PMU.init(Wire, TOUCH_IICSDA, TOUCH_IICSCL, SY6970_SLAVE_ADDRESS);
     if (result == false) {
         Serial.println("PMU is not online...");
         delay(50);
-    }
-    else 
-    {
+    } else {
         PMU.enableADCMeasure();
     }
 
-    sntp_servermode_dhcp(1); 
+    sntp_servermode_dhcp(1);
     configTime(GMT_OFFSET_SEC, DAY_LIGHT_OFFSET_SEC, NTP_SERVER1, NTP_SERVER2);
 
-    pinMode(TFT_BL, OUTPUT);
-    digitalWrite(TFT_BL, HIGH);
+    axs15231_init();
+
     pinMode(SY6970_OTG_EN, OUTPUT);
     digitalWrite(SY6970_OTG_EN, HIGH);
-
-    axs15231_init();
 
     lv_init();
     size_t buffer_size =
         sizeof(lv_color_t) * EXAMPLE_LCD_H_RES * EXAMPLE_LCD_V_RES;
     buf = (lv_color_t *)ps_malloc(buffer_size);
     if (buf == NULL) {
-      while (1) {
-        Serial.println("buf NULL");
-        delay(500);
-      }
+        while (1) {
+            Serial.println("buf NULL");
+            delay(500);
+        }
     }
 
     buf1 = (lv_color_t *)ps_malloc(buffer_size);
     if (buf1 == NULL) {
-      while (1) {
-        Serial.println("buf NULL");
-        delay(500);
-      }
+        while (1) {
+            Serial.println("buf NULL");
+            delay(500);
+        }
     }
 
     lv_disp_draw_buf_init(&draw_buf, buf, buf1, buffer_size);
@@ -187,31 +187,32 @@ void setup() {
     static lv_disp_drv_t disp_drv;
     lv_disp_drv_init(&disp_drv);
     /*Change the following line to your display resolution*/
-    disp_drv.hor_res = EXAMPLE_LCD_H_RES;
-    disp_drv.ver_res = EXAMPLE_LCD_V_RES;
-    disp_drv.flush_cb = my_disp_flush;
-    disp_drv.draw_buf = &draw_buf;
-    disp_drv.sw_rotate = 1;             //If you turn on software rotation, Do not update or replace LVGL
-    disp_drv.rotated = LV_DISP_ROT_90;  
-    disp_drv.full_refresh = 1;          //full_refresh must be 1
+    disp_drv.hor_res      = EXAMPLE_LCD_H_RES;
+    disp_drv.ver_res      = EXAMPLE_LCD_V_RES;
+    disp_drv.flush_cb     = my_disp_flush;
+    disp_drv.draw_buf     = &draw_buf;
+    disp_drv.sw_rotate    = 1;          // If you turn on software rotation, Do not update or replace LVGL
+    disp_drv.rotated      = LV_DISP_ROT_90;
+    disp_drv.full_refresh = 1;          // full_refresh must be 1
     lv_disp_drv_register(&disp_drv);
 
     static lv_indev_drv_t indev_drv;
     lv_indev_drv_init(&indev_drv);
-    indev_drv.type = LV_INDEV_TYPE_POINTER;
+    indev_drv.type    = LV_INDEV_TYPE_POINTER;
     indev_drv.read_cb = my_touchpad_read;
     lv_indev_drv_register(&indev_drv);
 
     setenv("TZ", "CST-8", 1);
 
-    wifi_test();
+    
 
     Serial.println("end\n");
 }
 
 extern uint32_t transfer_num;
-extern size_t lcd_PushColors_len;
-void loop() {
+extern size_t   lcd_PushColors_len;
+void            loop()
+{
     delay(1);
     if (transfer_num <= 0 && lcd_PushColors_len <= 0)
         lv_timer_handler();
@@ -231,38 +232,51 @@ void loop() {
 
     if (millis() > cycleInterval) {
         if (result != false) {
-            xSemaphoreTake(xSemaphore,portMAX_DELAY);
+            xSemaphoreTake(xSemaphore, portMAX_DELAY);
             char buf_Batt[41] = {0};
             snprintf(buf_Batt, 40, "USB:%s, OTG:%s\nBattVol:%dmV\n",
-                    (PMU.isVbusIn() ? "YES" : "NO"), (PMU.isEnableOTG() ? "YES" : "NO"), PMU.getBattVoltage());
+                     (PMU.isVbusIn() ? "YES" : "NO"), (PMU.isEnableOTG() ? "YES" : "NO"), PMU.getBattVoltage());
             lv_msg_send(MSG_NEW_USB, buf_Batt);
             xSemaphoreGive(xSemaphore);
         }
         cycleInterval = millis() + 500;
     }
+
+    static int           flag_bl = 0;
+    static unsigned long cnt     = 0;
+
+    cnt++;
+    if (cnt >= 100) {
+        if (flag_bl == 0) {
+            pinMode(TFT_BL, OUTPUT);
+            digitalWrite(TFT_BL, HIGH);
+            flag_bl = 1;
+            wifi_test();
+            ui_begin();
+        }
+    }
 }
 
 LV_IMG_DECLARE(lilygo2_gif);
-void lv_delay_ms(int x)    
+void lv_delay_ms(int x)
 {
-    do {                                                                                                                                               \
-      uint32_t t = x;                                                                                                                                  \
-      while (t--) {                                                                                                                                    \
-        delay(1);
-        if (transfer_num <= 0 && lcd_PushColors_len <= 0)
-          lv_timer_handler();
-        
-        if (transfer_num <= 1 && lcd_PushColors_len > 0) {
-          lcd_PushColors(0, 0, 0, 0, NULL);                                                                                                            \
-          }  
-      }                                                                                                                                                \
+    do {
+        uint32_t t = x;
+        while (t--) {
+            delay(1);
+            if (transfer_num <= 0 && lcd_PushColors_len <= 0)
+                lv_timer_handler();
+
+            if (transfer_num <= 1 && lcd_PushColors_len > 0) {
+                lcd_PushColors(0, 0, 0, 0, NULL);
+            }
+        }
     } while (0);
-    
-}                                                        
+}
 
 void wifi_test(void)
 {
-    String text;
+    String    text;
     lv_obj_t *boj = lv_obj_create(lv_scr_act());
     lv_obj_set_style_pad_all(boj, 0, 0);
     lv_obj_set_width(boj, LV_PCT(100));
@@ -326,8 +340,8 @@ void wifi_test(void)
     text += "\n";
     Serial.print((char *)(current_conf.sta.ssid));
 
-    uint32_t last_tick = millis();
-    bool is_smartconfig_connect = false;
+    uint32_t last_tick              = millis();
+    bool     is_smartconfig_connect = false;
     lv_label_set_long_mode(log_label, LV_LABEL_LONG_WRAP);
     while (WiFi.status() != WL_CONNECTED) {
         Serial.print(".");
@@ -374,7 +388,4 @@ void wifi_test(void)
         lv_label_set_text(log_label, text.c_str());
     }
     lv_delay_ms(500);
-
-    ui_begin();
 }
-
