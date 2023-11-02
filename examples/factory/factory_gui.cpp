@@ -304,7 +304,7 @@ void ui_begin()
 
     lv_obj_t *otg_btn = lv_btn_create(tv3);
     lv_obj_add_event_cb(otg_btn, otg_btn_cd, LV_EVENT_SHORT_CLICKED, NULL);
-    lv_obj_set_size(otg_btn, 100, 50);
+    lv_obj_set_size(otg_btn, 150, 50);
     lv_obj_align(otg_btn, LV_ALIGN_CENTER, -190, 0);
     lv_obj_set_style_bg_color(otg_btn, UI_FRAME_COLOR, 0);
     lv_obj_set_style_pad_all(otg_btn, 0, 0);
@@ -383,9 +383,13 @@ static void         otg_btn_cd(lv_event_t *event)
 
     if (btn_state) {
         btn_state = 0;
-        lv_msg_send(MSG_NEW_OTG_BTN, "OTG Close");
+        
         // digitalWrite(45, 1);
-        PMU.enableOTG();
+        if(PMU.enableOTG()){
+            lv_msg_send(MSG_NEW_OTG_BTN, "OTG Close");
+        }else{
+            lv_msg_send(MSG_NEW_OTG_BTN, "USB is not removed");
+        }
     } else {
         btn_state = 1;
         PMU.disableOTG();

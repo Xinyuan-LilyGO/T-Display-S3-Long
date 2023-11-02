@@ -147,7 +147,7 @@ void setup()
     delay(2);
 
     Wire.begin(TOUCH_IICSDA, TOUCH_IICSCL);
-    // result =  PMU.init(Wire, TOUCH_IICSDA, TOUCH_IICSCL, SY6970_SLAVE_ADDRESS);
+    result =  PMU.init(Wire, TOUCH_IICSDA, TOUCH_IICSCL, SY6970_SLAVE_ADDRESS);
     if (result == false) {
         Serial.println("PMU is not online...");
         delay(50);
@@ -203,8 +203,6 @@ void setup()
     lv_indev_drv_register(&indev_drv);
 
     setenv("TZ", "CST-8", 1);
-
-    
 
     Serial.println("end\n");
 }
