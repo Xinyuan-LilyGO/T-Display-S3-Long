@@ -43,7 +43,9 @@ examples/
 3. Copy all the files in `T-Display-S3-Long/lib` and paste them into Arduion library folder(e.g. C:\Users\YourName\Documents\Arduino\libraries).
 4. Open Arduino IDE, select the `examples\xxx` example of project `T-Display-S3-Long` throught `"File->Open"`.
 5. Configuration of board is as follows:
+
 ![setting](images/ArduinoIDE.jpg)
+
 6. Select `Port`
 7. Click `upload` , Wait for compilation and writing to complete
 8. If it cannot be written, or the USB device keeps flashing, please check the **FAQ** below
