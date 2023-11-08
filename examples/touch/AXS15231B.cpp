@@ -326,7 +326,7 @@ void lcd_PushColors(uint16_t x,
             spi_transaction_t *rtrans;
             esp_err_t ret = spi_device_get_trans_result(spi, &rtrans, portMAX_DELAY);
             if (ret != ESP_OK) {
-            ESP_LOGW(TAG, "1. transfer_num = %d", transfer_num_old);
+            // ESP_LOGW(TAG, "1. transfer_num = %d", transfer_num_old);
             }
             assert(ret == ESP_OK);
         }

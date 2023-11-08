@@ -39,15 +39,14 @@ examples/
 * It is recommended to use platformio without cumbersome steps
 
 1. Install [Arduino IDE](https://www.arduino.cc/en/software)
-2. Install [Arduino ESP32](https://docs.espressif.com/projects/arduino-esp32/en/latest/) 
-3. Download `T-Display-S3-Long` , move to Arduino library folder (e.g. C:\Users\YourName\Documents\Arduino\libraries)
-4. Copy all folders in [lib folder](./libdeps/)  to Arduino library folder (e.g. C:\Users\YourName\Documents\Arduino\libraries)
-5. Open ArduinoIDE  ,`Tools` , Look at the picture to choose
-  ![setting](images/ArduinoIDE.jpg)
-6. `File` -> `Examples` -> `T-Display-S3-Long` -> `Any Examples`
-7. Select `Port`
-8. Click `upload` , Wait for compilation and writing to complete
-9. If it cannot be written, or the USB device keeps flashing, please check the **FAQ** below
+2. Download or clone project `T-Display-S3-Long`
+3. Copy all the files in `T-Display-S3-Long/lib` and paste them into Arduion library folder(e.g. C:\Users\YourName\Documents\Arduino\libraries).
+4. Open Arduino IDE, select the `examples\xxx` example of project `T-Display-S3-Long` throught `"File->Open"`.
+5. Configuration of board is as follows:
+![setting](images/ArduinoIDE.jpg)
+6. Select `Port`
+7. Click `upload` , Wait for compilation and writing to complete
+8. If it cannot be written, or the USB device keeps flashing, please check the **FAQ** below
 
 # 5️⃣ ESP32 basic examples
 

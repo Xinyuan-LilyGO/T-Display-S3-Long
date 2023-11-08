@@ -21,12 +21,13 @@ LV_IMG_DECLARE(gif_78);
 LV_IMG_DECLARE(gif_89);
 LV_IMG_DECLARE(gif_90);
 
+#if (CLOCK_DEMO == CLOCK_NORMAL)
 static lv_point_t line_points[] = {
     {-600, 0},
     { 600, 0}
 };
-
 static void      update_text_subscriber_cb(lv_event_t *e);
+#endif
 static void      update_text_subscriber_cb_demo1(void *s, lv_msg_t *msg);
 static void      update_touch_point_subscriber_cb(lv_event_t *e);
 static void      otg_btn_subscriber_cb(lv_event_t *e);
