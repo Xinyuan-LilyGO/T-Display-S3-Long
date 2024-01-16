@@ -321,8 +321,8 @@ void wifi_test(void)
     esp_wifi_get_config(WIFI_IF_STA, &current_conf);
     if (strlen((const char *)current_conf.sta.ssid) == 0) {
         Serial.println("Use default WiFi SSID & PASSWORD!!");
-        memcpy((char *)(current_conf.sta.ssid), (const char *)WIFI_SSID, strlen(WIFI_SSID));
-        memcpy((char *)(current_conf.sta.password), (const char *)WIFI_PASSWORD, strlen(WIFI_PASSWORD));
+        memcpy((char *)(current_conf.sta.ssid), (const char *)WIFI_SSID, strlen(WIFI_SSID)+1);
+        memcpy((char *)(current_conf.sta.password), (const char *)WIFI_PASSWORD, strlen(WIFI_PASSWORD)+1);
         WiFi.begin((char *)(current_conf.sta.ssid), (char *)(current_conf.sta.password));
     } else {
         Serial.println("Begin WiFi");
