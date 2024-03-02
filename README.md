@@ -2,11 +2,11 @@
 
 ## 1️⃣Product
 
-| Product(PinMap)            | SOC        | Flash | PSRAM    | Resolution |
-| -------------------------- | ---------- | ----- | -------- | ---------- |
+| Product(PinMap)        | SOC        | Flash | PSRAM    | Resolution |
+| ---------------------- | ---------- | ----- | -------- | ---------- |
 | [T-Display-S3-Long][1] | ESP32-S3R8 | 16MB  | 8MB(OPI) | 180x640    |
 
-[1]:https://www.lilygo.cc
+[1]:https://www.lilygo.cc/products/t-display-s3-long
 
 
 ## 2️⃣Examples
@@ -16,6 +16,7 @@ examples/
 ├── Factory                 # Factory example
 ├── tft                     # Tft example
 ├── touch                   # Touchpad example
+├── QWIIC_Sensor            # QWIIC Wire example
 └── lvgl_demo               # LVGL examples  
 ```
 
