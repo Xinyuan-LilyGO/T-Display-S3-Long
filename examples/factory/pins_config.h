@@ -53,3 +53,12 @@
 
 #define PIN_BUTTON_1          0
 #define PIN_BUTTON_2          21
+
+#define SPI_SD_CS            38
+#define SPI_SD_MOSI           39
+#define SPI_SD_MISO           41
+#define SPI_SD_SCLK           40
+
+
+
+

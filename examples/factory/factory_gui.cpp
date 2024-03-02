@@ -3,6 +3,7 @@
 #include "SD_MMC.h"
 #include "lvgl.h"
 #include <WiFi.h>
+#include <SD.h>
 
 #define CLOCK_NORMAL 0
 #define CLOCK_FLIP   1
@@ -43,7 +44,8 @@ static lv_obj_t *img6;
 // Transition animation
 static const void *trans_ainm_buf[] = {
     &gif_01, &gif_12, &gif_23, &gif_34, &gif_45,
-    &gif_56, &gif_67, &gif_78, &gif_89, &gif_90};
+    &gif_56, &gif_67, &gif_78, &gif_89, &gif_90
+};
 
 #define set_anim_src(x) ((const void *)trans_ainm_buf[(x)])
 #define buf_limit(idx)  ((idx) % 10)
@@ -147,7 +149,7 @@ static void wifi_config_event_handler(lv_event_t *e)
             }
             // Every seconds check conected
         },
-                                     1000, btn);
+        1000, btn);
     }
 }
 
@@ -276,15 +278,18 @@ void ui_begin()
     String          text;
     esp_chip_info_t t;
     esp_chip_info(&t);
-    text = "chip : ";
+    text = "Chip : ";
     text += ESP.getChipModel();
     text += "\n";
-    text += "psram size : ";
+    text += "PSRAM Size : ";
     text += ESP.getPsramSize() / 1024;
     text += " KB\n";
-    text += "flash size : ";
+    text += "Flash Size : ";
     text += ESP.getFlashChipSize() / 1024;
     text += " KB\n";
+    text += "SD Size:";
+    text += String((float)(SD.cardSize() / 1024.0 / 1024.0 / 1024.0)).c_str();
+    text += " GB";
 
     lv_label_set_text(debug_label, text.c_str());
     lv_obj_align(debug_label, LV_ALIGN_CENTER, 0, -35);
@@ -384,17 +389,15 @@ static void         otg_btn_cd(lv_event_t *event)
 
     if (btn_state) {
         btn_state = 0;
-        
-        // digitalWrite(45, 1);
-        if(PMU.enableOTG()){
+
+        if (PMU.enableOTG()) {
             lv_msg_send(MSG_NEW_OTG_BTN, "OTG Close");
-        }else{
+        } else {
             lv_msg_send(MSG_NEW_OTG_BTN, "USB is not removed");
         }
     } else {
         btn_state = 1;
         PMU.disableOTG();
-        // digitalWrite(45, 0);
         lv_msg_send(MSG_NEW_OTG_BTN, "OTG Open");
     }
 }
@@ -410,11 +413,11 @@ static void update_text_subscriber_cb_demo1(void *s, lv_msg_t *msg)
 
     /* clang-format off */
     switch (lv_msg_get_id(msg)) {
-        case MSG_NEW_HOUR: hour = *v;   break;
-        case MSG_NEW_MIN:  minute = *v; break;
-        case MSG_NEW_SEC:  second = *v; break;
-        default:
-            break;
+    case MSG_NEW_HOUR: hour = *v;   break;
+    case MSG_NEW_MIN:  minute = *v; break;
+    case MSG_NEW_SEC:  second = *v; break;
+    default:
+        break;
     } /* clang-format off */
 
     if (lv_tick_elaps(start_tick) >= 1000) {
