@@ -60,5 +60,8 @@
 #define SPI_SD_SCLK           40
 
 
-
+#define TOUCH_IICSCL 10
+#define TOUCH_IICSDA 15
+#define TOUCH_INT    11
+#define TOUCH_RES    16
 

@@ -33,6 +33,7 @@ static void      update_text_subscriber_cb_demo1(void *s, lv_msg_t *msg);
 static void      update_touch_point_subscriber_cb(lv_event_t *e);
 static void      otg_btn_subscriber_cb(lv_event_t *e);
 static void      otg_btn_cd(lv_event_t *event);
+static void sleep_btn_cd(lv_event_t *event);
 static lv_obj_t *dis;
 
 static lv_obj_t *img1;
@@ -311,15 +312,26 @@ void ui_begin()
     lv_obj_t *otg_btn = lv_btn_create(tv3);
     lv_obj_add_event_cb(otg_btn, otg_btn_cd, LV_EVENT_SHORT_CLICKED, NULL);
     lv_obj_set_size(otg_btn, 150, 50);
-    lv_obj_align(otg_btn, LV_ALIGN_CENTER, -190, 0);
+    lv_obj_align(otg_btn, LV_ALIGN_CENTER, -190, -20);
     lv_obj_set_style_bg_color(otg_btn, UI_FRAME_COLOR, 0);
-    lv_obj_set_style_pad_all(otg_btn, 0, 0);
     lv_obj_t *otg_btn_label = lv_label_create(otg_btn);
     lv_obj_align(otg_btn_label, LV_ALIGN_CENTER, 0, 0);
     lv_obj_set_style_text_color(otg_btn_label, lv_color_hex(0xffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_add_event_cb(otg_btn_label, otg_btn_subscriber_cb, LV_EVENT_MSG_RECEIVED, NULL);
     lv_label_set_text_fmt(otg_btn_label, "OTG Open");
     lv_msg_subsribe_obj(MSG_NEW_OTG_BTN, otg_btn_label, (void *)"%s");
+
+
+    lv_obj_t *sleep_btn = lv_btn_create(tv3);
+    lv_obj_add_event_cb(sleep_btn, sleep_btn_cd, LV_EVENT_SHORT_CLICKED, NULL);
+    lv_obj_set_size(sleep_btn, 150, 50);
+    lv_obj_align_to(sleep_btn, otg_btn, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
+    lv_obj_set_style_bg_color(sleep_btn, UI_FRAME_COLOR, 0);
+
+    lv_obj_t *sleep_btn_label = lv_label_create(sleep_btn);
+    lv_obj_align(sleep_btn_label, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_style_text_color(sleep_btn_label, lv_color_hex(0xffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_label_set_text_fmt(sleep_btn_label, "Sleep");
 
     /* page 4 */
     String txt = "Use ESP Touch App Configure your network\n";
@@ -383,7 +395,7 @@ void ui_begin()
 
 #include <XPowersLib.h>
 extern PowersSY6970 PMU;
-static void         otg_btn_cd(lv_event_t *event)
+static void otg_btn_cd(lv_event_t *event)
 {
     static int btn_state = 1;
 
@@ -401,6 +413,13 @@ static void         otg_btn_cd(lv_event_t *event)
         lv_msg_send(MSG_NEW_OTG_BTN, "OTG Open");
     }
 }
+extern void boardSleep();
+static void sleep_btn_cd(lv_event_t *event)
+{
+    boardSleep();
+}
+
+
 
 #if (CLOCK_DEMO == CLOCK_FLIP)
 static void update_text_subscriber_cb_demo1(void *s, lv_msg_t *msg)

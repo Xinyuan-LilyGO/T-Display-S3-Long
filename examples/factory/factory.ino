@@ -31,10 +31,7 @@ static lv_color_t        *buf;
 static lv_color_t        *buf1;
 
 uint8_t ALS_ADDRESS = 0x3B;
-#define TOUCH_IICSCL 10
-#define TOUCH_IICSDA 15
-#define TOUCH_INT    11
-#define TOUCH_RES    16
+
 
 #define AXS_TOUCH_ONE_POINT_LEN 6
 #define AXS_TOUCH_BUF_HEAD_LEN  2
@@ -56,7 +53,6 @@ uint8_t ALS_ADDRESS = 0x3B;
 #define AXS_GET_POINT_Y(buf, point_index)     (((uint16_t)(buf[AXS_TOUCH_ONE_POINT_LEN * point_index + AXS_TOUCH_Y_H_POS] & 0x0F) << 8) + (uint16_t)buf[AXS_TOUCH_ONE_POINT_LEN * point_index + AXS_TOUCH_Y_L_POS])
 #define AXS_GET_POINT_EVENT(buf, point_index) (buf[AXS_TOUCH_ONE_POINT_LEN * point_index + AXS_TOUCH_EVENT_POS] >> 6)
 
-#define SY6970_OTG_EN 45
 
 void wifi_test(void);
 void SmartConfig();
@@ -155,6 +151,8 @@ void setup()
         delay(50);
     } else {
         PMU.enableADCMeasure();
+        PMU.disableStatLed();
+        PMU.disableOTG();
     }
 
     // Only the SD card version has an SD card slot
@@ -172,9 +170,6 @@ void setup()
     configTime(GMT_OFFSET_SEC, DAY_LIGHT_OFFSET_SEC, NTP_SERVER1, NTP_SERVER2);
 
     axs15231_init();
-
-    pinMode(SY6970_OTG_EN, OUTPUT);
-    digitalWrite(SY6970_OTG_EN, HIGH);
 
     lv_init();
     size_t buffer_size =
@@ -399,4 +394,27 @@ void wifi_test(void)
         lv_label_set_text(log_label, text.c_str());
     }
     lv_delay_ms(500);
+}
+
+
+void boardSleep()
+{
+    // Sleep display
+    lcd_sleep();
+
+    Wire.end();
+
+    pinMode(TOUCH_IICSCL, OPEN_DRAIN);
+    pinMode(TOUCH_IICSDA, OPEN_DRAIN);
+    pinMode(TOUCH_INT, OPEN_DRAIN);
+
+    // Disbale Touch chip
+    pinMode(TOUCH_RES, OUTPUT);
+    digitalWrite(TOUCH_RES, LOW);
+    gpio_hold_en(GPIO_NUM_16);
+    gpio_deep_sleep_hold_en();
+
+    esp_sleep_enable_ext1_wakeup(_BV(0), ESP_EXT1_WAKEUP_ALL_LOW);
+
+    esp_deep_sleep_start();
 }

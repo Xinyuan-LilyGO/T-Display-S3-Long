@@ -6,6 +6,10 @@
 | ---------------------- | ---------- | ----- | -------- | ---------- |
 | [T-Display-S3-Long][1] | ESP32-S3R8 | 16MB  | 8MB(OPI) | 180x640    |
 
+| Current consumption    | Working current             | sleep current | sleep mode  |
+| ---------------------- | --------------------------- | ------------- | ----------- |
+| [T-Display-S3-Long][1] | (240MHz) WiFi On 90~350+ mA | About 1.1mA   | gpio wakeup |
+
 [1]:https://www.lilygo.cc/products/t-display-s3-long
 
 
