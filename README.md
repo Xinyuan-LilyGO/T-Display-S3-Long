@@ -75,6 +75,14 @@ Please enter the upload mode manually.
    5. Upload sketch
 
 2. If the above is invalid, burn the [binary file](./firmware/README.MD)  to check whether the hardware is normal
+3. The OTG external power supply function requires turning on the PMU OTG enablement ,If the USB input is connected and the OTG is set to output, the battery will not be charged.
+   ```c
+         PMU.enableOTG();  //Enable OTG Power output
+         PMU.disableOTG(); //Disable OTG Power output
+   ```
+4. Turning the physical switch to OFF will completely disconnect the battery from the motherboard. When charging is required, turn the switch to ON.
+5. When the battery is not connected and the USB is plugged in, the board's LED status indicator light will flash. You can use `PMU.disableStatLed();` to turn off the indicator light, but this means that if the battery is connected for charging, the LED light will also be disabled. If you need to enable the charging status indicator, please call `PMU.enableStatLed();`
+
 
 # 7️⃣ Depends on required libraries
 
