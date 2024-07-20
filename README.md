@@ -21,6 +21,7 @@ examples/
 ├── tft                     # Tft example
 ├── touch                   # Touchpad example
 ├── QWIIC_Sensor            # QWIIC Wire example
+├── GFX_AXS15231B_Image       # Screen and touch test example
 └── lvgl_demo               # LVGL examples  
 ```
 
