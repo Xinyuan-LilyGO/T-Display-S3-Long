@@ -259,7 +259,7 @@ void            loop()
             digitalWrite(TFT_BL, HIGH);
             flag_bl = 1;
             wifi_test();
-            lv_delay_ms(2000);
+            lv_delay_ms(500);
             setTimezone();
             ui_begin();
         }
