@@ -1,4 +1,5 @@
 #include "lvgl.h" /* https://github.com/lvgl/lvgl.git */
+#include "pins_config.h"
 #include "AXS15231B.h"
 #include "WiFi.h"
 #include "factory_gui.h"
@@ -258,6 +259,8 @@ void            loop()
             digitalWrite(TFT_BL, HIGH);
             flag_bl = 1;
             wifi_test();
+            lv_delay_ms(2000);
+            setTimezone();
             ui_begin();
         }
     }
@@ -417,4 +420,74 @@ void boardSleep()
     esp_sleep_enable_ext1_wakeup(_BV(0), ESP_EXT1_WAKEUP_ALL_LOW);
 
     esp_deep_sleep_start();
+}
+
+void setTimezone()
+{
+#ifdef CUSTOM_TIMEZONE
+    String timezone = CUSTOM_TIMEZONE;
+#else
+    const char *rootCACertificate = R"string_literal(
+-----BEGIN CERTIFICATE-----
+MIICnzCCAiWgAwIBAgIQf/MZd5csIkp2FV0TttaF4zAKBggqhkjOPQQDAzBHMQsw
+CQYDVQQGEwJVUzEiMCAGA1UEChMZR29vZ2xlIFRydXN0IFNlcnZpY2VzIExMQzEU
+MBIGA1UEAxMLR1RTIFJvb3QgUjQwHhcNMjMxMjEzMDkwMDAwWhcNMjkwMjIwMTQw
+MDAwWjA7MQswCQYDVQQGEwJVUzEeMBwGA1UEChMVR29vZ2xlIFRydXN0IFNlcnZp
+Y2VzMQwwCgYDVQQDEwNXRTEwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAARvzTr+
+Z1dHTCEDhUDCR127WEcPQMFcF4XGGTfn1XzthkubgdnXGhOlCgP4mMTG6J7/EFmP
+LCaY9eYmJbsPAvpWo4H+MIH7MA4GA1UdDwEB/wQEAwIBhjAdBgNVHSUEFjAUBggr
+BgEFBQcDAQYIKwYBBQUHAwIwEgYDVR0TAQH/BAgwBgEB/wIBADAdBgNVHQ4EFgQU
+kHeSNWfE/6jMqeZ72YB5e8yT+TgwHwYDVR0jBBgwFoAUgEzW63T/STaj1dj8tT7F
+avCUHYwwNAYIKwYBBQUHAQEEKDAmMCQGCCsGAQUFBzAChhhodHRwOi8vaS5wa2ku
+Z29vZy9yNC5jcnQwKwYDVR0fBCQwIjAgoB6gHIYaaHR0cDovL2MucGtpLmdvb2cv
+ci9yNC5jcmwwEwYDVR0gBAwwCjAIBgZngQwBAgEwCgYIKoZIzj0EAwMDaAAwZQIx
+AOcCq1HW90OVznX+0RGU1cxAQXomvtgM8zItPZCuFQ8jSBJSjz5keROv9aYsAm5V
+sQIwJonMaAFi54mrfhfoFNZEfuNMSQ6/bIBiNLiyoX46FohQvKeIoJ99cx7sUkFN
+7uJW
+-----END CERTIFICATE-----
+)string_literal";
+
+    WiFiClientSecure *client = new WiFiClientSecure;
+    String timezone;
+    if (client) {
+        client->setCACert(rootCACertificate);
+        HTTPClient https;
+        if (https.begin(*client, GET_TIMEZONE_API)) {
+            int httpCode = https.GET();
+            if (httpCode > 0) {
+                // HTTP header has been send and Server response header has been handled
+                Serial.printf("[HTTPS] GET %s... code: %d\n", GET_TIMEZONE_API, httpCode);
+
+                // file found at server
+                if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
+                    String payload = https.getString();
+                    Serial.println(payload);
+                    timezone = payload;
+                }
+            } else {
+                Serial.printf("[HTTPS] GET %s... failed, error: %s\n", GET_TIMEZONE_API, https.errorToString(httpCode).c_str());
+            }
+            https.end();
+        }
+        delete client;
+    }
+    for (uint32_t i = 0; i < sizeof(zones); i++) {
+        if (timezone == "None") {
+            timezone = "CST-8";
+            break;
+        }
+        if (timezone == zones[i].name) {
+            timezone = zones[i].zones;
+            break;
+        }
+    }
+#endif
+
+    if (timezone) {
+      Serial.println("timezone : " + timezone);
+      setenv("TZ", timezone.c_str(), 1); // set time zone
+      tzset();
+    } else {
+      Serial.println("failed to fetch timezone");
+    }
 }
