@@ -19,9 +19,9 @@
 examples/
 ├── Factory                 # Factory example
 ├── tft                     # Tft example
-├── touch                   # Touchpad example
+├── cst3530_touch           # Touchpad example
 ├── QWIIC_Sensor            # QWIIC Wire example
-├── GFX_AXS15231B_Image       # Screen and touch test example
+├── GFX_AXS15231B_Image     # Screen and touch test example
 └── lvgl_demo               # LVGL examples  
 ```
 

@@ -48,6 +48,10 @@
 #define TFT_QSPI_RST          16
 #define TFT_BL                1
 
+#define TP_RST 2
+#define TP_IRQ 11
+#define TP_I2C_SDA 15
+#define TP_I2C_SCL 10
 
 #define PIN_BAT_VOLT          2
 

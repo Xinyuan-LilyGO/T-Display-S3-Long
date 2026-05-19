@@ -16,8 +16,10 @@
 #include <SPI.h>
 #include <SD.h>
 #include "freertos/semphr.h"
+#include "hyn_core.h"
+
 SemaphoreHandle_t xSemaphore = NULL;
-PowersSY6970      PMU;
+PowersSY6970 PMU;
 
 //================================
 // If you turn on software rotation(disp_drv.sw_rotate = 1), Do not update or replace LVGL.
@@ -28,40 +30,17 @@ const char *ntpServer1 = "pool.ntp.org";
 const char *ntpServer2 = "time.nist.gov";
 
 static lv_disp_draw_buf_t draw_buf;
-static lv_color_t        *buf;
-static lv_color_t        *buf1;
-
-uint8_t ALS_ADDRESS = 0x3B;
-
-
-#define AXS_TOUCH_ONE_POINT_LEN 6
-#define AXS_TOUCH_BUF_HEAD_LEN  2
-
-#define AXS_TOUCH_GESTURE_POS 0
-#define AXS_TOUCH_POINT_NUM   1
-#define AXS_TOUCH_EVENT_POS   2
-#define AXS_TOUCH_X_H_POS     2
-#define AXS_TOUCH_X_L_POS     3
-#define AXS_TOUCH_ID_POS      4
-#define AXS_TOUCH_Y_H_POS     4
-#define AXS_TOUCH_Y_L_POS     5
-#define AXS_TOUCH_WEIGHT_POS  6
-#define AXS_TOUCH_AREA_POS    7
-
-#define AXS_GET_POINT_NUM(buf)                buf[AXS_TOUCH_POINT_NUM]
-#define AXS_GET_GESTURE_TYPE(buf)             buf[AXS_TOUCH_GESTURE_POS]
-#define AXS_GET_POINT_X(buf, point_index)     (((uint16_t)(buf[AXS_TOUCH_ONE_POINT_LEN * point_index + AXS_TOUCH_X_H_POS] & 0x0F) << 8) + (uint16_t)buf[AXS_TOUCH_ONE_POINT_LEN * point_index + AXS_TOUCH_X_L_POS])
-#define AXS_GET_POINT_Y(buf, point_index)     (((uint16_t)(buf[AXS_TOUCH_ONE_POINT_LEN * point_index + AXS_TOUCH_Y_H_POS] & 0x0F) << 8) + (uint16_t)buf[AXS_TOUCH_ONE_POINT_LEN * point_index + AXS_TOUCH_Y_L_POS])
-#define AXS_GET_POINT_EVENT(buf, point_index) (buf[AXS_TOUCH_ONE_POINT_LEN * point_index + AXS_TOUCH_EVENT_POS] >> 6)
-
+static lv_color_t *buf;
+static lv_color_t *buf1;
 
 void wifi_test(void);
 void SmartConfig();
 void setTimezone();
 
+struct hyn_ts_data *ts_data;
 static uint32_t last_tick;
-struct tm       timeinfo;
-uint32_t        cycleInterval = 0;
+struct tm timeinfo;
+uint32_t cycleInterval = 0;
 
 void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area,
                    lv_color_t *color_p)
@@ -71,7 +50,8 @@ void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area,
 
 #ifdef LCD_SPI_DMA
     char i = 0;
-    while (get_lcd_spi_dma_write()) {
+    while (get_lcd_spi_dma_write())
+    {
         i = i >> 1;
         lcd_PushColors(0, 0, 0, 0, NULL);
     }
@@ -86,41 +66,23 @@ void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area,
 }
 
 uint8_t read_touchpad_cmd[11] = {0xb5, 0xab, 0xa5, 0x5a, 0x0, 0x0, 0x0, 0x8};
-void    my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data)
+void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data)
 {
     xSemaphoreTake(xSemaphore, portMAX_DELAY);
-    uint8_t buff[20] = {0};
+    ts_data = get_touch_data();
 
-    Wire.beginTransmission(0x3B);
-    Wire.write(read_touchpad_cmd, 8);
-    Wire.endTransmission();
-    Wire.requestFrom(0x3B, 8);
-    while (!Wire.available())
-        ;
-    Wire.readBytes(buff, 8);
-
-    uint16_t pointX;
-    uint16_t pointY;
-    uint16_t type = 0;
-
-    type   = AXS_GET_GESTURE_TYPE(buff);
-    pointX = AXS_GET_POINT_X(buff, 0);
-    pointY = AXS_GET_POINT_Y(buff, 0);
-
-    if (!type && (pointX || pointY)) {
-        pointX = (640 - pointX);
-        if (pointX > 640)
-            pointX = 640;
-        if (pointY > 180)
-            pointY = 180;
-        data->state   = LV_INDEV_STATE_PR;
-        data->point.x = pointY;
-        data->point.y = pointX;
+    if (ts_data->rp_buf.rep_num > 0)
+    {
+        data->state = LV_INDEV_STATE_PR;
+        data->point.x = ts_data->rp_buf.pos_info[0].pos_x;
+        data->point.y = ts_data->rp_buf.pos_info[0].pos_y;
 
         String str_buf;
-        str_buf += "x: " + String(pointY) + " y: " + String(pointX) + "\n";
+        str_buf += "x: " + String(data->point.x) + " y: " + String(data->point.y) + "\n";
         lv_msg_send(MSG_NEW_TOUCH_POINT, str_buf.c_str());
-    } else {
+    }
+    else
+    {
         data->state = LV_INDEV_STATE_REL;
     }
     xSemaphoreGive(xSemaphore);
@@ -137,20 +99,15 @@ void setup()
 
     pinMode(PIN_BAT_VOLT, ANALOG);
 
-    pinMode(TOUCH_RES, OUTPUT);
-    digitalWrite(TOUCH_RES, HIGH);
-    delay(2);
-    digitalWrite(TOUCH_RES, LOW);
-    delay(10);
-    digitalWrite(TOUCH_RES, HIGH);
-    delay(2);
-
-    Wire.begin(TOUCH_IICSDA, TOUCH_IICSCL);
-    result =  PMU.init(Wire, TOUCH_IICSDA, TOUCH_IICSCL, SY6970_SLAVE_ADDRESS);
-    if (result == false) {
+    Wire.begin(I2C_SDA, I2C_SCL);
+    result = PMU.init(Wire, I2C_SDA, I2C_SCL, SY6970_SLAVE_ADDRESS);
+    if (result == false)
+    {
         Serial.println("PMU is not online...");
         delay(50);
-    } else {
+    }
+    else
+    {
         PMU.enableADCMeasure();
         PMU.disableStatLed();
         PMU.disableOTG();
@@ -158,34 +115,41 @@ void setup()
 
     // Only the SD card version has an SD card slot
     SPI.begin(SPI_SD_SCLK, SPI_SD_MISO, SPI_SD_MOSI);
-    if (!SD.begin(SPI_SD_CS)) {
+    if (!SD.begin(SPI_SD_CS))
+    {
         Serial.println("Failed to detect SD Card!");
     }
-    if (SD.cardType() != CARD_NONE) {
+    Serial.printf("SD Card Type: %d\n", SD.cardType());
+    if (SD.cardType() != CARD_NONE)
+    {
         Serial.printf("SD Card Size:");
         Serial.print(SD.cardSize() / (1024 * 1024));
         Serial.println(" MB");
     }
 
-
     configTime(GMT_OFFSET_SEC, DAY_LIGHT_OFFSET_SEC, NTP_SERVER1, NTP_SERVER2);
 
     axs15231_init();
+    touch_init(I2C_SDA, I2C_SCL, TP_IRQ, TP_RST);
 
     lv_init();
     size_t buffer_size =
         sizeof(lv_color_t) * EXAMPLE_LCD_H_RES * EXAMPLE_LCD_V_RES;
     buf = (lv_color_t *)ps_malloc(buffer_size);
-    if (buf == NULL) {
-        while (1) {
+    if (buf == NULL)
+    {
+        while (1)
+        {
             Serial.println("buf NULL");
             delay(500);
         }
     }
 
     buf1 = (lv_color_t *)ps_malloc(buffer_size);
-    if (buf1 == NULL) {
-        while (1) {
+    if (buf1 == NULL)
+    {
+        while (1)
+        {
             Serial.println("buf NULL");
             delay(500);
         }
@@ -196,18 +160,18 @@ void setup()
     static lv_disp_drv_t disp_drv;
     lv_disp_drv_init(&disp_drv);
     /*Change the following line to your display resolution*/
-    disp_drv.hor_res      = EXAMPLE_LCD_H_RES;
-    disp_drv.ver_res      = EXAMPLE_LCD_V_RES;
-    disp_drv.flush_cb     = my_disp_flush;
-    disp_drv.draw_buf     = &draw_buf;
-    disp_drv.sw_rotate    = 1;          // If you turn on software rotation, Do not update or replace LVGL
-    disp_drv.rotated      = LV_DISP_ROT_90;
-    disp_drv.full_refresh = 1;          // full_refresh must be 1
+    disp_drv.hor_res = EXAMPLE_LCD_H_RES;
+    disp_drv.ver_res = EXAMPLE_LCD_V_RES;
+    disp_drv.flush_cb = my_disp_flush;
+    disp_drv.draw_buf = &draw_buf;
+    disp_drv.sw_rotate = 1; // If you turn on software rotation, Do not update or replace LVGL
+    disp_drv.rotated = LV_DISP_ROT_90;
+    disp_drv.full_refresh = 1; // full_refresh must be 1
     lv_disp_drv_register(&disp_drv);
 
     static lv_indev_drv_t indev_drv;
     lv_indev_drv_init(&indev_drv);
-    indev_drv.type    = LV_INDEV_TYPE_POINTER;
+    indev_drv.type = LV_INDEV_TYPE_POINTER;
     indev_drv.read_cb = my_touchpad_read;
     lv_indev_drv_register(&indev_drv);
 
@@ -217,19 +181,22 @@ void setup()
 }
 
 extern uint32_t transfer_num;
-extern size_t   lcd_PushColors_len;
-void            loop()
+extern size_t lcd_PushColors_len;
+void loop()
 {
     delay(1);
     if (transfer_num <= 0 && lcd_PushColors_len <= 0)
         lv_timer_handler();
 
-    if (transfer_num <= 1 && lcd_PushColors_len > 0) {
+    if (transfer_num <= 1 && lcd_PushColors_len > 0)
+    {
         lcd_PushColors(0, 0, 0, 0, NULL);
     }
 
-    if (millis() - last_tick > 100) {
-        if (getLocalTime(&timeinfo, 2)) {
+    if (millis() - last_tick > 100)
+    {
+        if (getLocalTime(&timeinfo, 2))
+        {
             lv_msg_send(MSG_NEW_HOUR, &timeinfo.tm_hour);
             lv_msg_send(MSG_NEW_MIN, &timeinfo.tm_min);
             lv_msg_send(MSG_NEW_SEC, &timeinfo.tm_sec);
@@ -237,8 +204,10 @@ void            loop()
         last_tick = millis();
     }
 
-    if (millis() > cycleInterval) {
-        if (result != false) {
+    if (millis() > cycleInterval)
+    {
+        if (result != false)
+        {
             xSemaphoreTake(xSemaphore, portMAX_DELAY);
             char buf_Batt[41] = {0};
             snprintf(buf_Batt, 40, "USB:%s, OTG:%s\nBattVol:%dmV\n",
@@ -249,12 +218,14 @@ void            loop()
         cycleInterval = millis() + 500;
     }
 
-    static int           flag_bl = 0;
-    static unsigned long cnt     = 0;
+    static int flag_bl = 0;
+    static unsigned long cnt = 0;
 
     cnt++;
-    if (cnt >= 100) {
-        if (flag_bl == 0) {
+    if (cnt >= 100)
+    {
+        if (flag_bl == 0)
+        {
             pinMode(TFT_BL, OUTPUT);
             digitalWrite(TFT_BL, HIGH);
             flag_bl = 1;
@@ -269,14 +240,17 @@ void            loop()
 LV_IMG_DECLARE(lilygo2_gif);
 void lv_delay_ms(int x)
 {
-    do {
+    do
+    {
         uint32_t t = x;
-        while (t--) {
+        while (t--)
+        {
             delay(1);
             if (transfer_num <= 0 && lcd_PushColors_len <= 0)
                 lv_timer_handler();
 
-            if (transfer_num <= 1 && lcd_PushColors_len > 0) {
+            if (transfer_num <= 1 && lcd_PushColors_len > 0)
+            {
                 lcd_PushColors(0, 0, 0, 0, NULL);
             }
         }
@@ -285,7 +259,7 @@ void lv_delay_ms(int x)
 
 void wifi_test(void)
 {
-    String    text;
+    String text;
     lv_obj_t *boj = lv_obj_create(lv_scr_act());
     lv_obj_set_style_pad_all(boj, 0, 0);
     lv_obj_set_width(boj, LV_PCT(100));
@@ -311,12 +285,16 @@ void wifi_test(void)
     lv_delay_ms(100);
     int n = WiFi.scanNetworks();
     Serial.println("scan done");
-    if (n == 0) {
+    if (n == 0)
+    {
         text = "no networks found";
-    } else {
+    }
+    else
+    {
         text = n;
         text += " networks found\n";
-        for (int i = 0; i < n; ++i) {
+        for (int i = 0; i < n; ++i)
+        {
             text += (i + 1);
             text += ": ";
             text += WiFi.SSID(i);
@@ -330,12 +308,15 @@ void wifi_test(void)
 
     wifi_config_t current_conf = {0};
     esp_wifi_get_config(WIFI_IF_STA, &current_conf);
-    if (strlen((const char *)current_conf.sta.ssid) == 0) {
+    if (strlen((const char *)current_conf.sta.ssid) == 0)
+    {
         Serial.println("Use default WiFi SSID & PASSWORD!!");
         memcpy((char *)(current_conf.sta.ssid), (const char *)WIFI_SSID, strlen(WIFI_SSID) + 1);
         memcpy((char *)(current_conf.sta.password), (const char *)WIFI_PASSWORD, strlen(WIFI_PASSWORD) + 1);
         WiFi.begin((char *)(current_conf.sta.ssid), (char *)(current_conf.sta.password));
-    } else {
+    }
+    else
+    {
         Serial.println("Begin WiFi");
         WiFi.begin();
     }
@@ -349,15 +330,17 @@ void wifi_test(void)
     text += "\n";
     Serial.print((char *)(current_conf.sta.ssid));
 
-    uint32_t last_tick              = millis();
-    bool     is_smartconfig_connect = false;
+    uint32_t last_tick = millis();
+    bool is_smartconfig_connect = false;
     lv_label_set_long_mode(log_label, LV_LABEL_LONG_WRAP);
-    while (WiFi.status() != WL_CONNECTED) {
+    while (WiFi.status() != WL_CONNECTED)
+    {
         Serial.print(".");
         text += ".";
         lv_label_set_text(log_label, text.c_str());
         lv_delay_ms(100);
-        if (millis() - last_tick > WIFI_CONNECT_WAIT_MAX) { /* Automatically start smartconfig when connection times out */
+        if (millis() - last_tick > WIFI_CONNECT_WAIT_MAX)
+        { /* Automatically start smartconfig when connection times out */
             text += "\nConnection timed out, start smartconfig";
             lv_label_set_text(log_label, text.c_str());
             lv_delay_ms(100);
@@ -368,9 +351,11 @@ void wifi_test(void)
             text += "\nPlease use #ff0000 EspTouch# Apps to connect to the distribution network";
             lv_label_set_text(log_label, text.c_str());
             WiFi.beginSmartConfig();
-            while (1) {
+            while (1)
+            {
                 lv_delay_ms(100);
-                if (WiFi.smartConfigDone()) {
+                if (WiFi.smartConfigDone())
+                {
                     Serial.println("\r\nSmartConfig Success\r\n");
                     Serial.printf("SSID:%s\r\n", WiFi.SSID().c_str());
                     Serial.printf("PSW:%s\r\n", WiFi.psk().c_str());
@@ -387,7 +372,8 @@ void wifi_test(void)
             }
         }
     }
-    if (!is_smartconfig_connect) {
+    if (!is_smartconfig_connect)
+    {
         text += "\nCONNECTED \nTakes ";
         Serial.print("\n CONNECTED \nTakes ");
         text += millis() - last_tick;
@@ -399,7 +385,6 @@ void wifi_test(void)
     lv_delay_ms(500);
 }
 
-
 void boardSleep()
 {
     // Sleep display
@@ -407,13 +392,9 @@ void boardSleep()
 
     Wire.end();
 
-    pinMode(TOUCH_IICSCL, OPEN_DRAIN);
-    pinMode(TOUCH_IICSDA, OPEN_DRAIN);
-    pinMode(TOUCH_INT, OPEN_DRAIN);
+    pinMode(I2C_SCL, OPEN_DRAIN);
+    pinMode(I2C_SDA, OPEN_DRAIN);
 
-    // Disbale Touch chip
-    pinMode(TOUCH_RES, OUTPUT);
-    digitalWrite(TOUCH_RES, LOW);
     gpio_hold_en(GPIO_NUM_16);
     gpio_deep_sleep_hold_en();
 
@@ -449,45 +430,57 @@ sQIwJonMaAFi54mrfhfoFNZEfuNMSQ6/bIBiNLiyoX46FohQvKeIoJ99cx7sUkFN
 
     WiFiClientSecure *client = new WiFiClientSecure;
     String timezone;
-    if (client) {
+    if (client)
+    {
         client->setCACert(rootCACertificate);
         HTTPClient https;
-        if (https.begin(*client, GET_TIMEZONE_API)) {
+        if (https.begin(*client, GET_TIMEZONE_API))
+        {
             int httpCode = https.GET();
-            if (httpCode > 0) {
+            if (httpCode > 0)
+            {
                 // HTTP header has been send and Server response header has been handled
                 Serial.printf("[HTTPS] GET %s... code: %d\n", GET_TIMEZONE_API, httpCode);
 
                 // file found at server
-                if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
+                if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY)
+                {
                     String payload = https.getString();
                     Serial.println(payload);
                     timezone = payload;
                 }
-            } else {
+            }
+            else
+            {
                 Serial.printf("[HTTPS] GET %s... failed, error: %s\n", GET_TIMEZONE_API, https.errorToString(httpCode).c_str());
             }
             https.end();
         }
         delete client;
     }
-    for (uint32_t i = 0; i < sizeof(zones); i++) {
-        if (timezone == "None") {
+    for (uint32_t i = 0; i < sizeof(zones); i++)
+    {
+        if (timezone == "None")
+        {
             timezone = "CST-8";
             break;
         }
-        if (timezone == zones[i].name) {
+        if (timezone == zones[i].name)
+        {
             timezone = zones[i].zones;
             break;
         }
     }
 #endif
 
-    if (timezone) {
-      Serial.println("timezone : " + timezone);
-      setenv("TZ", timezone.c_str(), 1); // set time zone
-      tzset();
-    } else {
-      Serial.println("failed to fetch timezone");
+    if (timezone)
+    {
+        Serial.println("timezone : " + timezone);
+        setenv("TZ", timezone.c_str(), 1); // set time zone
+        tzset();
+    }
+    else
+    {
+        Serial.println("failed to fetch timezone");
     }
 }

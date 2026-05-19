@@ -1,0 +1,38 @@
+1、芯片对应关系
+/*************************************************************/
+//    handle            chip types
+// &cst66xx_fuc   /*suport 36xx 35xx 66xx 68xx 148E*/
+// &cst3240_fuc   /*suport 3240 */
+// &cst92xx_fuc   /*suport 9217、9220 */
+// &cst3xx_fuc    /*suport 328 128 140 148 340 348*/
+// &cst7xx_fuc    /*suport 726 826 830 836u*/
+// &cst8xxT_fuc   /*suport 816t 816d 820 08C*/
+// &cst226se_fuc  /*226se*/
+/*************************************************************/
+
+2、主要用到的接口函数
+    tp_chip_init（） //初始化并获取芯片ID 等信息
+    tp_report（） //int降沿或者低电平 调用读点
+
+
+3、移植步骤：
+    3.1 配置RST和INT对应GPIO，定义gpio 输出/如函数
+        #define gpio_set_value(gpio,value)   gpio_direction_output(gpio,value)
+        #define gpio_get_value(gpio)         gpio_read(gpio)
+    3.2 实现delayms函数、实现I2c读、写函数
+        void hyn_delay_ms(int cnt)
+        int hyn_wr_reg(struct hyn_ts_data *ts_data, u32 reg_addr, u8 reg_len, u8 *rbuf, u16 rlen)
+        int hyn_read_data(struct hyn_ts_data *ts_data,u8 *buf, u16 len)
+        int hyn_write_data(struct hyn_ts_data *ts_data, u8 *buf, u8 reg_len, u16 len)
+		
+/*****关于寄存器读写注意************************************/
+eg:寄存器0xD0000000
+  实际数据发送顺序是 D0->00->00->00  4byte
+eg:寄存器0x0001 和 寄存器 0x01 是完全不同的
+   0x0001 实际发送 00->01  2byte
+   0x01   发送的是 1byte
+   
+建议沿用我们范例里的读写函数接口
+
+
+

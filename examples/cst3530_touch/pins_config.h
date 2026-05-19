@@ -48,13 +48,12 @@
 #define TFT_QSPI_RST          16
 #define TFT_BL                1
 
+#define TP_RST 2
+#define TP_IRQ 11
+#define TP_I2C_SDA 15
+#define TP_I2C_SCL 10
 
 #define PIN_BAT_VOLT          2
 
 #define PIN_BUTTON_1          0
 #define PIN_BUTTON_2          21
-
-#define TOUCH_IICSCL 10
-#define TOUCH_IICSDA 15
-#define TOUCH_INT 11
-#define TOUCH_RES 2

@@ -38,6 +38,14 @@ typedef struct
     uint8_t len;
 } lcd_cmd_t;
 
+typedef struct
+{
+    uint8_t cmd;
+    uint8_t data[48];
+    uint8_t len;
+    uint16_t delay;
+} axs15231b_lcd_cmd_t;
+
 void axs15231_init(void);
 
 // Set the display window size
