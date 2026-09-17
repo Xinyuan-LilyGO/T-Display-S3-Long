@@ -1,0 +1,147 @@
+# LilyGO T-Display S3 Long (https://lilygo.cc/products/t-display-s3-long)
+# working landscape ESPHome config, 640x180, AXS15231B QSPI + CST3530 touch.
+#
+# The 5 things that actually matter are marked FIX 1-5 below. Everything
+# else is boilerplate. Background:
+#
+# This board's AXS15231B panel controller has real, documented quirks that
+# corrupt the image under ESPHome's default LVGL settings - see the still
+# open https://github.com/Xinyuan-LilyGO/T-Display-S3-Long/issues/44, where
+# several people hit the same "partial red area missing" / garbled-strip
+# symptom with their own from-scratch drivers and never fully resolved it.
+# You do NOT need a custom driver or a hardware axis-swap to get a clean
+# landscape image on this board - ESPHome's stock `mipi_spi` driver with
+# `model: AXS15231` already works, once you know which non-default knobs
+# to turn. No ESPHome source changes needed, just this config.
+#
+# Symptoms this config fixes, if you're arriving here from your own
+# debugging: a thin garbage/noise line or band at one edge of the screen,
+# and/or a hard crash inside lv_display_set_buffers a few seconds after
+# boot (visible as a watchdog abort in the logs, screen staying blank).
+
+esphome:
+  name: t-display-s3-long
+
+esp32:
+  board: esp32-s3-devkitc-1
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+
+psram:
+  mode: octal
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+api:
+ota:
+  - platform: esphome
+
+logger:
+
+# ---------------------------------------------------------------------------
+# QSPI bus - pins from LilyGO's own example firmware
+# (Xinyuan-LilyGO/T-Display-S3-Long, examples/*/pins_config.h)
+# ---------------------------------------------------------------------------
+spi:
+  - id: display_qspi
+    type: quad
+    clk_pin: GPIO17
+    data_pins: [GPIO13, GPIO18, GPIO21, GPIO14]
+
+i2c:
+  id: touchscreen_bus
+  sda: GPIO15
+  scl: GPIO10
+
+output:
+  - platform: ledc
+    pin: GPIO1
+    id: backlight_pwm
+
+light:
+  - platform: monochromatic
+    output: backlight_pwm
+    name: Display Backlight
+    id: display_backlight
+    restore_mode: RESTORE_DEFAULT_ON
+
+touchscreen:
+  - platform: axs15231
+    id: my_touchscreen
+    display: my_display
+    i2c_id: touchscreen_bus
+    transform:
+      mirror_x: true
+      mirror_y: true
+      swap_xy: false
+    calibration:
+      x_min: 0
+      x_max: 640
+      y_min: 0
+      y_max: 180
+
+# ---------------------------------------------------------------------------
+# Display - stock mipi_spi driver, native (portrait) panel geometry.
+# ---------------------------------------------------------------------------
+display:
+  - platform: mipi_spi
+    id: my_display
+    spi_id: display_qspi
+    model: AXS15231
+    # FIX 1: declare the panel's true native geometry (180 wide x 640
+    # tall) - not the rotated 640x180 you actually want to see. This chip
+    # has no working hardware axis-swap bit (MADCTL_MV), so asking the
+    # display block itself to rotate does not work correctly here.
+    dimensions:
+      height: 640
+      width: 180
+    cs_pin: GPIO12
+    reset_pin: GPIO16
+    auto_clear_enabled: false
+    # Left at the AXS15231 model's own default (10MHz) deliberately -
+    # this is the known-safe rate for this panel.
+
+# ---------------------------------------------------------------------------
+# LVGL - this is where the actual rotation and both corruption fixes live.
+# ---------------------------------------------------------------------------
+lvgl:
+  # FIX 2: rotation goes on the LVGL block, not the display block above.
+  # ESPHome will reject `rotation:` on a mipi_spi display block when LVGL
+  # is present ("use of 'rotation' in the display config is not
+  # compatible with LVGL, please set rotation in the LVGL config
+  # instead"). This performs the rotation in software, which is fine -
+  # this chip can't do it in hardware regardless.
+  rotation: 90
+  # FIX 3: full_refresh forces every LVGL flush to redraw the *entire*
+  # screen through one fixed, always-aligned address window, instead of
+  # an arbitrary partial dirty-rectangle. This AXS15231B controller
+  # mishandles some partial/odd-coordinate address windows (see issue #44
+  # linked above) - full_refresh sidesteps that class of bug entirely.
+  full_refresh: true
+  # FIX 4: full_refresh needs the whole frame available to redraw as one
+  # unit. Pairing it with a fractional buffer_size (e.g. 50%) hard-crashed
+  # our ESPHome version - a watchdog abort inside lv_display_set_buffers,
+  # before setup() even finished, leaving the screen permanently blank.
+  buffer_size: 100%
+  # FIX 5: the panel's native width is 180px, which the ESPHome LVGL
+  # default draw_rounding (8) does not evenly divide (180 / 8 = 22.5).
+  # LVGL rounds a partial flush region up to the next multiple of 8 -
+  # writing a few rows past the real addressable buffer, which showed up
+  # on hardware as a thin garbage line at one edge. 4 divides 180 evenly
+  # (45) and is still a valid power-of-two rounding value. Note: with
+  # full_refresh: true above, every flush already covers the whole
+  # screen, so this mostly matters if you ever turn full_refresh back off.
+  draw_rounding: 4
+  displays: my_display
+  touchscreens:
+    - touchscreen_id: my_touchscreen
+  pages:
+    - id: main_page
+      widgets:
+        - label:
+            text: "It works!"
+            align: CENTER
+            text_font: montserrat_24
